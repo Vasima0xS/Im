@@ -1,1 +1,1 @@
-console("hello")
+print("hello")
