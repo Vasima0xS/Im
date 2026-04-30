@@ -1,5 +1,5 @@
--- // UI Library Module
--- // SInAray UI Library v1.0
+-- // Исправленная UI Library Module
+-- // SInAray UI Library v2.0
 
 local UI = {}
 UI.__index = UI
@@ -9,7 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
--- // Цвета по умолчанию
+-- // Настройки по умолчанию
 UI.DefaultSettings = {
     MainColor = Color3.fromRGB(20, 20, 25),
     SecondColor = Color3.fromRGB(30, 30, 40),
@@ -37,7 +37,11 @@ function UI.CreateWindow(title, version)
     MainFrame.Parent = GUI
     
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
-    Instance.new("UIStroke", MainFrame).Color = UI.DefaultSettings.AccentColor
+    
+    local BorderStroke = Instance.new("UIStroke", MainFrame)
+    BorderStroke.Color = UI.DefaultSettings.AccentColor
+    BorderStroke.Thickness = 1.5
+    BorderStroke.Transparency = 0.5
     
     local TitleBar = Instance.new("Frame", MainFrame)
     TitleBar.Size = UDim2.new(1, 0, 0, 30)
@@ -68,8 +72,9 @@ function UI.CreateWindow(title, version)
     Window.TitleBar = TitleBar
     Window.Close = Close
     Window.Tabs = {}
+    Window.BorderStroke = BorderStroke
     
-    -- Drag system
+    -- // Drag system
     local dragging, dragStart, startPos
     TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -96,7 +101,7 @@ function UI.CreateWindow(title, version)
         GUI:Destroy()
     end)
     
-    -- Animation
+    -- // Animation
     MainFrame.Size = UDim2.new(0, 0, 0, 0)
     TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
         Size = UDim2.new(0, 600, 0, 400)
@@ -116,7 +121,7 @@ function UI:CreateTab(name)
     local TabButton = Instance.new("TextButton", TabFrame)
     TabButton.Size = UDim2.new(1, -10, 0, 30)
     TabButton.Position = UDim2.new(0, 5, 0, 10 + (#self.Tabs * 35))
-    TabButton.BackgroundColor3 = UI.DefaultSettings.AccentColor
+    TabButton.BackgroundColor3 = #self.Tabs == 0 and UI.DefaultSettings.AccentColor or UI.DefaultSettings.SecondColor
     TabButton.Text = name
     TabButton.TextColor3 = UI.DefaultSettings.TextColor
     TabButton.Font = Enum.Font.Gotham
@@ -131,8 +136,10 @@ function UI:CreateTab(name)
     Content.BackgroundTransparency = 1
     Content.BorderSizePixel = 0
     Content.ScrollBarThickness = 4
+    Content.ScrollBarImageColor3 = UI.DefaultSettings.AccentColor
     Content.CanvasSize = UDim2.new(0, 0, 0, 0)
     Content.Visible = #self.Tabs == 0
+    Content.ZIndex = 2
     
     local UIList = Instance.new("UIListLayout", Content)
     UIList.Padding = UDim.new(0, 5)
@@ -146,10 +153,14 @@ function UI:CreateTab(name)
     TabButton.MouseButton1Click:Connect(function()
         for _, tab in ipairs(self.Tabs) do
             tab.Content.Visible = false
-            tab.Button.BackgroundColor3 = UI.DefaultSettings.SecondColor
+            TweenService:Create(tab.Button, TweenInfo.new(0.2), {
+                BackgroundColor3 = UI.DefaultSettings.SecondColor
+            }):Play()
         end
         Content.Visible = true
-        TabButton.BackgroundColor3 = UI.DefaultSettings.AccentColor
+        TweenService:Create(TabButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = UI.DefaultSettings.AccentColor
+        }):Play()
     end)
     
     return Content
@@ -173,7 +184,7 @@ function UI:CreateSection(parent, name)
     return Section
 end
 
--- // Создание кнопки
+-- // Создание кнопки с анимацией
 function UI:CreateButton(parent, name, callback)
     local Button = Instance.new("TextButton", parent)
     Button.Size = UDim2.new(1, -10, 0, 30)
@@ -186,12 +197,33 @@ function UI:CreateButton(parent, name, callback)
     
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
     
-    Button.MouseButton1Click:Connect(callback or function() end)
+    Button.MouseEnter:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {
+            BackgroundColor3 = UI.DefaultSettings.AccentColor
+        }):Play()
+    end)
+    
+    Button.MouseLeave:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {
+            BackgroundColor3 = UI.DefaultSettings.SecondColor
+        }):Play()
+    end)
+    
+    Button.MouseButton1Click:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.1), {
+            Size = UDim2.new(0.95, -10, 0, 28)
+        }):Play()
+        task.wait(0.1)
+        TweenService:Create(Button, TweenInfo.new(0.1), {
+            Size = UDim2.new(1, -10, 0, 30)
+        }):Play()
+        if callback then callback() end
+    end)
     
     return Button
 end
 
--- // Создание чекбокса
+-- // Создание чекбокса с анимацией
 function UI:CreateCheckbox(parent, name, default, callback)
     local Frame = Instance.new("Frame", parent)
     Frame.Size = UDim2.new(1, -10, 0, 35)
@@ -206,6 +238,11 @@ function UI:CreateCheckbox(parent, name, default, callback)
     
     Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 3)
     
+    local BoxStroke = Instance.new("UIStroke", Box)
+    BoxStroke.Color = UI.DefaultSettings.AccentColor
+    BoxStroke.Thickness = default and 1 or 0
+    BoxStroke.Transparency = default and 0 or 1
+    
     local Check = Instance.new("TextLabel", Box)
     Check.Size = UDim2.new(1, 0, 1, 0)
     Check.BackgroundTransparency = 1
@@ -214,6 +251,7 @@ function UI:CreateCheckbox(parent, name, default, callback)
     Check.Font = Enum.Font.GothamBold
     Check.TextSize = 14
     Check.Visible = default or false
+    Check.TextTransparency = default and 0 or 1
     
     local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(1, -30, 1, 0)
@@ -228,15 +266,25 @@ function UI:CreateCheckbox(parent, name, default, callback)
     local state = default or false
     Box.MouseButton1Click:Connect(function()
         state = not state
-        Box.BackgroundColor3 = state and UI.DefaultSettings.AccentColor or UI.DefaultSettings.SecondColor
-        Check.Visible = state
+        if state then
+            TweenService:Create(Box, TweenInfo.new(0.2), {BackgroundColor3 = UI.DefaultSettings.AccentColor}):Play()
+            TweenService:Create(BoxStroke, TweenInfo.new(0.2), {Thickness = 1, Transparency = 0}):Play()
+            Check.Visible = true
+            TweenService:Create(Check, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+        else
+            TweenService:Create(Box, TweenInfo.new(0.2), {BackgroundColor3 = UI.DefaultSettings.SecondColor}):Play()
+            TweenService:Create(BoxStroke, TweenInfo.new(0.2), {Thickness = 0, Transparency = 1}):Play()
+            TweenService:Create(Check, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+            task.wait(0.2)
+            Check.Visible = false
+        end
         if callback then callback(state) end
     end)
     
     return {Toggle = Box, State = state}
 end
 
--- // Создание слайдера
+-- // Создание слайдера с анимацией круга
 function UI:CreateSlider(parent, name, min, max, default, callback)
     local Frame = Instance.new("Frame", parent)
     Frame.Size = UDim2.new(1, -10, 0, 45)
@@ -256,6 +304,7 @@ function UI:CreateSlider(parent, name, min, max, default, callback)
     SliderBg.Position = UDim2.new(0, 0, 0, 25)
     SliderBg.BackgroundColor3 = UI.DefaultSettings.SecondColor
     SliderBg.BorderSizePixel = 0
+    SliderBg.Active = true
     
     Instance.new("UICorner", SliderBg).CornerRadius = UDim.new(1, 0)
     
@@ -267,68 +316,103 @@ function UI:CreateSlider(parent, name, min, max, default, callback)
     
     Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
     
-    local Knob = Instance.new("TextButton", SliderBg)
-    Knob.Size = UDim2.new(0, 12, 0, 12)
-    Knob.Position = UDim2.new(percent, -6, 0, -3)
+    -- Свечение вокруг круга
+    local Glow = Instance.new("Frame", SliderBg)
+    Glow.Size = UDim2.new(0, 0, 0, 0)
+    Glow.Position = UDim2.new(percent, -10, 0, -10)
+    Glow.BackgroundColor3 = UI.DefaultSettings.AccentColor
+    Glow.BackgroundTransparency = 1
+    Glow.BorderSizePixel = 0
+    Glow.ZIndex = 4
+    Instance.new("UICorner", Glow).CornerRadius = UDim.new(1, 0)
+    
+    local Knob = Instance.new("Frame", SliderBg)
+    Knob.Size = UDim2.new(0, 14, 0, 14)
+    Knob.Position = UDim2.new(percent, -7, 0, -4)
     Knob.BackgroundColor3 = UI.DefaultSettings.TextColor
-    Knob.Text = ""
     Knob.BorderSizePixel = 0
+    Knob.ZIndex = 5
+    
+    local KnobStroke = Instance.new("UIStroke", Knob)
+    KnobStroke.Color = UI.DefaultSettings.AccentColor
+    KnobStroke.Thickness = 2
+    KnobStroke.Transparency = 0.5
     
     Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
     
     local sliding = false
     
-    local function update(input)
+    local function updateSlider(input)
         local size = SliderBg.AbsoluteSize.X
         local pos = math.clamp((input.Position.X - SliderBg.AbsolutePosition.X) / size, 0, 1)
         local value = math.floor(min + (max - min) * pos)
         
-        Fill.Size = UDim2.new(pos, 0, 1, 0)
-        Knob.Position = UDim2.new(pos, -6, 0, -3)
+        TweenService:Create(Fill, TweenInfo.new(0.05), {Size = UDim2.new(pos, 0, 1, 0)}):Play()
+        TweenService:Create(Knob, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(pos, -7, 0, -4)
+        }):Play()
         Label.Text = name .. ": " .. value
         
         if callback then callback(value) end
     end
     
-    Knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            sliding = true
-        end
-    end)
-    
     SliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             sliding = true
-            update(input)
+            -- Анимация увеличения круга
+            TweenService:Create(Knob, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 20, 0, 20)
+            }):Play()
+            TweenService:Create(KnobStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+            TweenService:Create(Glow, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 28, 0, 28),
+                BackgroundTransparency = 0.7
+            }):Play()
+            updateSlider(input)
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input)
         if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
-            update(input)
+            updateSlider(input)
+            Glow.Position = UDim2.new(
+                Knob.Position.X.Scale, 
+                Knob.Position.X.Offset - 7, 
+                0, 
+                Knob.Position.Y.Offset - 7
+            )
         end
     end)
     
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then
             sliding = false
+            -- Анимация уменьшения круга
+            TweenService:Create(Knob, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 14, 0, 14)
+            }):Play()
+            TweenService:Create(KnobStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+            TweenService:Create(Glow, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 0, 0, 0),
+                BackgroundTransparency = 1
+            }):Play()
         end
     end)
     
     return {Slider = SliderBg, Value = default or min}
 end
 
--- // Создание выпадающего списка (ИСПРАВЛЕНО - поверх других элементов)
+-- // Создание выпадающего списка с анимацией вылета
 function UI:CreateDropdown(parent, name, options, callback)
     local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(1, -10, 0, 30)
+    Frame.Size = UDim2.new(1, -10, 0, 35)
     Frame.BackgroundTransparency = 1
-    Frame.ZIndex = 5
+    Frame.ClipsDescendants = false
     
     local Button = Instance.new("TextButton", Frame)
-    Button.Size = UDim2.new(1, 0, 0, 28)
+    Button.Size = UDim2.new(1, 0, 0, 32)
     Button.BackgroundColor3 = UI.DefaultSettings.SecondColor
-    Button.Text = "▼ " .. name
+    Button.Text = "▼  " .. name
     Button.TextColor3 = UI.DefaultSettings.SubTextColor
     Button.Font = Enum.Font.Gotham
     Button.TextSize = 11
@@ -338,50 +422,86 @@ function UI:CreateDropdown(parent, name, options, callback)
     
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
     
+    local Arrow = Instance.new("TextLabel", Button)
+    Arrow.Size = UDim2.new(0, 20, 1, 0)
+    Arrow.Position = UDim2.new(1, -25, 0, 0)
+    Arrow.BackgroundTransparency = 1
+    Arrow.Text = "▼"
+    Arrow.TextColor3 = UI.DefaultSettings.SubTextColor
+    Arrow.Font = Enum.Font.GothamBold
+    Arrow.TextSize = 10
+    Arrow.ZIndex = 6
+    
     local List = Instance.new("Frame", Frame)
     List.Size = UDim2.new(1, 0, 0, 0)
     List.Position = UDim2.new(0, 0, 1, 2)
     List.BackgroundColor3 = UI.DefaultSettings.SecondColor
     List.BorderSizePixel = 0
     List.Visible = false
-    List.ZIndex = 100 -- ВЫСОКИЙ ZINDEX ДЛЯ ПОВЕРХ ВСЕХ ЭЛЕМЕНТОВ
+    List.ZIndex = 100
     List.ClipsDescendants = true
     
     Instance.new("UICorner", List).CornerRadius = UDim.new(0, 4)
-    Instance.new("UIStroke", List).Color = UI.DefaultSettings.AccentColor
     
     local open = false
     
     Button.MouseButton1Click:Connect(function()
         open = not open
-        List.Visible = open
         if open then
-            List.Size = UDim2.new(1, 0, 0, #options * 28)
-            Frame.Size = UDim2.new(1, -10, 0, 35 + #options * 28)
+            List.Visible = true
+            -- Анимация вылета вниз
+            TweenService:Create(List, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, #options * 32)
+            }):Play()
+            TweenService:Create(Arrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
+            Frame.Size = UDim2.new(1, -10, 0, 35 + #options * 32)
         else
-            List.Size = UDim2.new(1, 0, 0, 0)
-            Frame.Size = UDim2.new(1, -10, 0, 30)
+            -- Анимация закрытия
+            TweenService:Create(List, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, 0, 0, 0)
+            }):Play()
+            TweenService:Create(Arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            task.wait(0.2)
+            List.Visible = false
+            Frame.Size = UDim2.new(1, -10, 0, 35)
         end
     end)
     
     for i, option in ipairs(options) do
         local OptBtn = Instance.new("TextButton", List)
-        OptBtn.Size = UDim2.new(1, 0, 0, 28)
-        OptBtn.Position = UDim2.new(0, 0, 0, (i-1) * 28)
+        OptBtn.Size = UDim2.new(1, 0, 0, 32)
+        OptBtn.Position = UDim2.new(0, 0, 0, (i-1) * 32)
         OptBtn.BackgroundColor3 = UI.DefaultSettings.SecondColor
-        OptBtn.Text = option
+        OptBtn.Text = "   " .. option
         OptBtn.TextColor3 = UI.DefaultSettings.SubTextColor
         OptBtn.Font = Enum.Font.Gotham
         OptBtn.TextSize = 11
         OptBtn.BorderSizePixel = 0
         OptBtn.ZIndex = 101
+        OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+        
+        OptBtn.MouseEnter:Connect(function()
+            TweenService:Create(OptBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = UI.DefaultSettings.AccentColor
+            }):Play()
+        end)
+        
+        OptBtn.MouseLeave:Connect(function()
+            TweenService:Create(OptBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = UI.DefaultSettings.SecondColor
+            }):Play()
+        end)
         
         OptBtn.MouseButton1Click:Connect(function()
-            Button.Text = "▼ " .. option
+            Button.Text = "▼  " .. option
             open = false
+            TweenService:Create(List, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(1, 0, 0, 0)
+            }):Play()
+            TweenService:Create(Arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
+            task.wait(0.2)
             List.Visible = false
-            List.Size = UDim2.new(1, 0, 0, 0)
-            Frame.Size = UDim2.new(1, -10, 0, 30)
+            Frame.Size = UDim2.new(1, -10, 0, 35)
             if callback then callback(option) end
         end)
     end
@@ -389,14 +509,14 @@ function UI:CreateDropdown(parent, name, options, callback)
     return {Button = Button, List = List}
 end
 
--- // Создание переключателя
+-- // Создание переключателя с анимацией
 function UI:CreateToggle(parent, name, default, callback)
     local Frame = Instance.new("Frame", parent)
-    Frame.Size = UDim2.new(1, -10, 0, 30)
+    Frame.Size = UDim2.new(1, -10, 0, 35)
     Frame.BackgroundTransparency = 1
     
     local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(0, 100, 1, 0)
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = name
     Label.TextColor3 = UI.DefaultSettings.SubTextColor
@@ -405,8 +525,8 @@ function UI:CreateToggle(parent, name, default, callback)
     Label.TextXAlignment = Enum.TextXAlignment.Left
     
     local Toggle = Instance.new("TextButton", Frame)
-    Toggle.Size = UDim2.new(0, 40, 0, 20)
-    Toggle.Position = UDim2.new(1, -40, 0, 5)
+    Toggle.Size = UDim2.new(0, 44, 0, 22)
+    Toggle.Position = UDim2.new(1, -44, 0, 5)
     Toggle.BackgroundColor3 = default and UI.DefaultSettings.AccentColor or UI.DefaultSettings.SecondColor
     Toggle.Text = ""
     Toggle.BorderSizePixel = 0
@@ -414,8 +534,8 @@ function UI:CreateToggle(parent, name, default, callback)
     Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1, 0)
     
     local Knob = Instance.new("Frame", Toggle)
-    Knob.Size = UDim2.new(0, 16, 0, 16)
-    Knob.Position = default and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)
+    Knob.Size = UDim2.new(0, 18, 0, 18)
+    Knob.Position = default and UDim2.new(1, -20, 0, 2) or UDim2.new(0, 2, 0, 2)
     Knob.BackgroundColor3 = UI.DefaultSettings.TextColor
     Knob.BorderSizePixel = 0
     
@@ -424,8 +544,21 @@ function UI:CreateToggle(parent, name, default, callback)
     local state = default or false
     Toggle.MouseButton1Click:Connect(function()
         state = not state
-        Toggle.BackgroundColor3 = state and UI.DefaultSettings.AccentColor or UI.DefaultSettings.SecondColor
-        Knob.Position = state and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)
+        if state then
+            TweenService:Create(Toggle, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = UI.DefaultSettings.AccentColor
+            }):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(1, -20, 0, 2)
+            }):Play()
+        else
+            TweenService:Create(Toggle, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = UI.DefaultSettings.SecondColor
+            }):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 2, 0, 2)
+            }):Play()
+        end
         if callback then callback(state) end
     end)
     
